@@ -15,7 +15,7 @@ from course_modes.models import get_cosmetic_verified_display_price
 from courseware.access import has_access
 from courseware.courses import can_self_enroll_in_course, get_course_info_section, get_course_with_access
 from lms.djangoapps.commerce.utils import EcommerceService
-from lms.djangoapps.completion.services import CompletionService
+# from lms.djangoapps.completion.services import CompletionService
 from lms.djangoapps.course_goals.api import (
     get_course_goal,
     get_course_goal_options,
@@ -91,18 +91,23 @@ class CourseHomeFragmentView(EdxFragmentView):
             if not block['last_accessed']:
                 return None
             if not block.get('children'):
-                course_key = CourseKey.from_string(course_id)
-                completion_service_instance = CompletionService(
-                    user=request.user,
-                    course_key=course_key
-                )
-                if completion_service_instance.completion_tracking_enabled():
-                    block_usage_key = UsageKey.from_string(block['id'])
-                    completion_data = completion_service_instance.get_completions([block_usage_key])
-                    if completion_data > 0.0:
-                        return block
-                else:
-                    return block
+                # course_key = CourseKey.from_string(course_id)
+                # completion_service_instance = CompletionService(
+                #     user=request.user,
+                #     course_key=course_key
+                # )
+                # if completion_service_instance.completion_tracking_enabled():
+                #     # print 'WOW'
+                #     block_usage_key = UsageKey.from_string(block['id'])
+                #     completion_data = completion_service_instance.get_completions([block_usage_key])
+                #     # print '***'
+                #     print completion_data  #.values()[0]
+                #     if float(completion_data.values()[0] > 0.2:
+                #         return block
+                #     # else:
+                #     return None
+                # else:
+                return block
 
             for child in block['children']:
                 last_accessed_block = get_last_accessed_block(child)

@@ -11,14 +11,24 @@ from gating import api as lms_gating_api
 from mock import patch, Mock
 
 from courseware.tests.factories import StaffFactory
+# from openedx.core.djangoapps.waffle_utils.testutils import override_waffle_flag
 from openedx.core.lib.gating import api as gating_api
 from student.models import CourseEnrollment
-from student.tests.factories import UserFactory
+from student.tests.factories import UserFactory, CourseEnrollmentFactory
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from milestones.tests.utils import MilestonesTestCaseMixin
 from lms.djangoapps.course_api.blocks.transformers.milestones import MilestonesAndSpecialExamsTransformer
+
+# from lms.djangoapps.completion.services import CompletionService
+from django.test import TestCase
+from lms.djangoapps.completion.models import BlockCompletionManager, BlockCompletion
+from lms.djangoapps.completion import waffle
+from opaque_keys.edx.keys import CourseKey, UsageKey
+# from lms.djangoapps.completion.test_utils import CompletionWaffleTestMixin
+# from cms.djangoapps.contentstore.tests.utils import parse_json
+# from openedx.features.course_experience.utils import get_course_outline_block_tree
 
 from .test_course_home import course_home_url
 
@@ -348,9 +358,33 @@ class TestCourseOutlineResumeCourse(SharedModuleStoreTestCase):
 
         self.assertContains(response, 'Start Course', count=0)
         self.assertContains(response, 'Resume Course', count=2)
-
         content = pq(response.content)
         self.assertTrue(content('.action-resume-course').attr('href').endswith('/sequential/' + sequential.url_name))
+
+    # def test_resume_course_with_completion_api(self):
+    #     # Enable the waffle flag for all tests
+    #     _overrider = waffle.waffle().override(waffle.ENABLE_COMPLETION_TRACKING, True)
+    #     _overrider.__enter__()
+    #     # self.addCleanup(_overrider.__exit__, None, None, None)
+    #
+    #     # with patch('lms.djangoapps.completion.models.BlockCompletionManager.submit_completion') as mock_complete:
+    #     # self.visit_sequential(course, chapter, sequential2)
+    #     course = CourseFactory.create()
+    #     block = ItemFactory.create(category='comp', parent=course)
+    #     # fake_course_str = str(course.id) + 'fake'
+    #     course_key = CourseKey.from_string(str(course.id))
+    #
+    #     # course_key = CourseKey.from_string(course.)
+    #     bcm = BlockCompletionManager()
+    #
+    #     bcm.submit_completion(self.user, course_key, block.scope_ids.usage_id, 0.7)
+    #
+    #     response = self.client.get(course_home_url(course))
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertContains(response, 'Start Course', count=0)
+    #     self.assertContains(response, 'Resume Course', count=2)
+    #     content = pq(response.content)
+    #     self.assertTrue(content('.action-resume-course').attr('href').endswith('/sequential/' + block.url_name))
 
     def test_resume_course_deleted_sequential(self):
         """
@@ -470,3 +504,37 @@ class TestCourseOutlinePreview(SharedModuleStoreTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'Future Chapter')
+
+
+class ResumeCoursecompletion(SharedModuleStoreTestCase):
+    """
+
+    """
+    def setUp(self):
+        super(ResumeCoursecompletion, self).setUp()
+        _overrider = waffle.waffle().override(waffle.ENABLE_COMPLETION_TRACKING, True)
+        _overrider.__enter__()
+        self.addCleanup(_overrider.__exit__, None, None, None)
+
+        self.block_key = UsageKey.from_string('block-v1:edx+test+run+type@video+block@doggos')
+        self.course = CourseFactory()
+        # self.course_key_obj = CourseKey.from_string(self.course.id) #'course-v1:edx+test+run')
+        self.user = UserFactory()
+        CourseEnrollmentFactory.create(user=self.user, course_id=unicode(self.course.id))
+
+    def test_block_completion(self):
+        course_key_obj = CourseKey.from_string(unicode(self.course.id))
+
+        blocks = [(self.block_key, 1.0)]
+        BlockCompletion.objects.submit_batch_completion(self.user, course_key_obj, blocks)
+        self.assertEqual(BlockCompletion.objects.count(), 1)
+        self.assertEqual(BlockCompletion.objects.last().completion, 1.0)
+
+
+        response = self.client.get(course_home_url(self.course))
+        # print self.course_key_obj
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Start Course', count=0)
+        self.assertContains(response, 'Resume Course', count=2)
+        content = pq(response.content)
+        self.assertTrue(content('.action-resume-course').attr('href').endswith('doggos' + block.url_name))

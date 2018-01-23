@@ -1,13 +1,15 @@
 """
 Common utilities for the course experience, including course outline.
 """
-from opaque_keys.edx.keys import CourseKey
+from opaque_keys.edx.keys import CourseKey, UsageKey
 
 from lms.djangoapps.course_api.blocks.api import get_blocks
 from lms.djangoapps.course_blocks.utils import get_student_module_as_dict
 from request_cache.middleware import request_cached
 from xmodule.modulestore.django import modulestore
 
+from lms.djangoapps.completion.services import CompletionService
+from lms.djangoapps.completion.models import BlockCompletion
 
 @request_cached
 def get_course_outline_block_tree(request, course_id):
@@ -41,13 +43,38 @@ def get_course_outline_block_tree(request, course_id):
         for child in block.get('children', []):
             set_last_accessed_default(child)
 
+    def mark_last_completed(user, course_key, block):
+        """
+
+        """
+        # TODO: EDUCATOR-2088
+
+        print 'WOW'
+
+        completion_service_instance = CompletionService(
+            user=user,
+            course_key=course_key
+        )
+
+        block_query = BlockCompletion.objects.filter(
+            user=user,
+            course_key=course_key,
+        )
+        for b in block_query:
+            print '***'
+            print b.completion
+            print b.block_key
+        for child in block.get('children'):
+            print '!!!'
+            print child['id']
+
     def mark_last_accessed(user, course_key, block):
         """
         Recursively marks the branch to the last accessed block.
         """
-        # TODO: EDUCATOR-2088
         block_key = block.serializer.instance
         student_module_dict = get_student_module_as_dict(user, course_key, block_key)
+
         last_accessed_child_position = student_module_dict.get('position')
         if last_accessed_child_position and block.get('children'):
             block['last_accessed'] = True
@@ -76,5 +103,12 @@ def get_course_outline_block_tree(request, course_id):
     if course_outline_root_block:
         populate_children(course_outline_root_block, all_blocks['blocks'])
         set_last_accessed_default(course_outline_root_block)
-        mark_last_accessed(request.user, course_key, course_outline_root_block)
+        completion_service_instance = CompletionService(
+            user=request.user,
+            course_key=course_key
+        )
+        if completion_service_instance.completion_tracking_enabled():
+            mark_last_completed(request.user, course_key, course_outline_root_block)
+        else:
+            mark_last_accessed(request.user, course_key, course_outline_root_block)
     return course_outline_root_block
