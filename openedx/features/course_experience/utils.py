@@ -49,9 +49,9 @@ def get_course_outline_block_tree(request, course_id):
         """
 
         """
-        RESUME_BLOCKS_WHITELIST = [
-            'sequential', 'vertical', 'html', 'problem', 'video'
-        ]
+        # RESUME_BLOCKS_WHITELIST = [
+        #     'sequential', 'vertical', 'html', 'problem', 'video'
+        # ]
 
         def recurse_mark_complete(completion_query, last_complete, block):
             locatable_block_string = BlockUsageLocator.from_string(block['id'])
@@ -64,7 +64,7 @@ def get_course_outline_block_tree(request, course_id):
             if block.get('children'):
                 for child in block['children']:
                     block['children'][block['children'].index(child)] = recurse_mark_complete(completion_query, last_complete, block=child)
-                    if block['children'][block['children'].index(child)]['last_accessed'] is True and block['type'] in RESUME_BLOCKS_WHITELIST:
+                    if block['children'][block['children'].index(child)]['last_accessed'] is True: #  and block['type'] in RESUME_BLOCKS_WHITELIST:
                         block['last_accessed'] = True
             return block
 
