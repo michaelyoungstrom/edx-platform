@@ -59,3 +59,24 @@ class CompletionService(object):
             if candidate not in completions:
                 completions[candidate] = 0.0
         return completions
+
+    def get_course_completions(self):
+        """
+        query all completions for a course/user pair
+
+        Return value: dict[BlockKey] = float
+        """
+        course_block_query = BlockCompletion.objects.filter(
+            user=self._user,
+            course_key=self._course_key,
+        )
+        completions = {block.block_key: block.completion for block in course_block_query}
+        return completions
+
+    def get_latest_block_completed(self):
+        latest_completed_block_query = BlockCompletion.objects.filter(
+            user=self._user,
+            course_key=self._course_key,
+        ).latest()
+        completions = {latest_completed_block_query.block_key: latest_completed_block_query.completion} # for block in latest_completed_block_query}
+        return completions

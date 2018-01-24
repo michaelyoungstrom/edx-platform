@@ -2,6 +2,7 @@
 Common utilities for the course experience, including course outline.
 """
 from opaque_keys.edx.keys import CourseKey, UsageKey
+from opaque_keys.edx.locator import BlockUsageLocator
 
 from lms.djangoapps.course_api.blocks.api import get_blocks
 from lms.djangoapps.course_blocks.utils import get_student_module_as_dict
@@ -40,33 +41,40 @@ def get_course_outline_block_tree(request, course_id):
         Set default of False for last_accessed on all blocks.
         """
         block['last_accessed'] = False
+        block['complete'] = False
         for child in block.get('children', []):
             set_last_accessed_default(child)
 
-    def mark_last_completed(user, course_key, block):
+    def mark_blocks_completed(user, course_key, block):
         """
 
         """
-        # TODO: EDUCATOR-2088
+        RESUME_BLOCKS_WHITELIST = [
+            'sequential', 'vertical', 'html', 'problem', 'video'
+        ]
 
-        print 'WOW'
+        def recurse_mark_complete(completion_query, last_complete, block):
+            locatable_block_string = BlockUsageLocator.from_string(block['id'])
+
+            if BlockUsageLocator.from_string(block['id']) in completion_query.keys():
+                block['complete'] = True
+                if locatable_block_string == last_complete.keys()[0]:
+                    block['last_accessed'] = True
+
+            if block.get('children'):
+                for child in block['children']:
+                    block['children'][block['children'].index(child)] = recurse_mark_complete(completion_query, last_complete, block=child)
+                    if block['children'][block['children'].index(child)]['last_accessed'] is True and block['type'] in RESUME_BLOCKS_WHITELIST:
+                        block['last_accessed'] = True
+            return block
 
         completion_service_instance = CompletionService(
             user=user,
             course_key=course_key
         )
-
-        block_query = BlockCompletion.objects.filter(
-            user=user,
-            course_key=course_key,
-        )
-        for b in block_query:
-            print '***'
-            print b.completion
-            print b.block_key
-        for child in block.get('children'):
-            print '!!!'
-            print child['id']
+        last_completed_child_position = completion_service_instance.get_latest_block_completed()
+        course_block_query = completion_service_instance.get_course_completions()
+        block = recurse_mark_complete(completion_query=course_block_query, last_complete=last_completed_child_position, block=block)
 
     def mark_last_accessed(user, course_key, block):
         """
@@ -96,7 +104,7 @@ def get_course_outline_block_tree(request, course_id):
         user=request.user,
         nav_depth=3,
         requested_fields=['children', 'display_name', 'type', 'due', 'graded', 'special_exam_info', 'show_gated_sections', 'format'],
-        block_types_filter=['course', 'chapter', 'sequential']
+        block_types_filter=['course', 'chapter', 'sequential', 'vertical', 'html', 'problem', 'video']
     )
 
     course_outline_root_block = all_blocks['blocks'].get(all_blocks['root'], None)
@@ -108,7 +116,7 @@ def get_course_outline_block_tree(request, course_id):
             course_key=course_key
         )
         if completion_service_instance.completion_tracking_enabled():
-            mark_last_completed(request.user, course_key, course_outline_root_block)
+            mark_blocks_completed(request.user, course_key, course_outline_root_block)
         else:
             mark_last_accessed(request.user, course_key, course_outline_root_block)
     return course_outline_root_block

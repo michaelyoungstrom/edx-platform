@@ -176,6 +176,7 @@ class BlockCompletion(TimeStampedModel, models.Model):
         unique_together = [
             ('course_key', 'block_key', 'user')
         ]
+        get_latest_by = 'modified'
 
     def __unicode__(self):
         return 'BlockCompletion: {username}, {course_key}, {block_key}: {completion}'.format(
