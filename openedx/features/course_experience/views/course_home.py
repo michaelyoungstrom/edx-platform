@@ -85,7 +85,7 @@ class CourseHomeFragmentView(EdxFragmentView):
 
         def get_resume_block(block):
             """
-            Gets the deepest block marked as 'resume_block', or with a completion value > 0.
+            Gets the deepest block marked as 'resume_block'.
 
             """
             if not block['resume_block']:
