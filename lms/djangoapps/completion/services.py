@@ -74,9 +74,12 @@ class CompletionService(object):
         return completions
 
     def get_latest_block_completed(self):
-        latest_completed_block_query = BlockCompletion.objects.filter(
-            user=self._user,
-            course_key=self._course_key,
-        ).latest()
-        completions = {latest_completed_block_query.block_key: latest_completed_block_query.completion} # for block in latest_completed_block_query}
+        try:
+            latest_completed_block_query = BlockCompletion.objects.filter(
+                user=self._user,
+                course_key=self._course_key,
+            ).latest()
+        except BlockCompletion.DoesNotExist:
+            return {}
+        completions = {latest_completed_block_query.block_key: latest_completed_block_query.completion}
         return completions

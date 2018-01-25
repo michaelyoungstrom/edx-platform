@@ -24,8 +24,9 @@ from lms.djangoapps.course_api.blocks.transformers.milestones import MilestonesA
 # from lms.djangoapps.completion.services import CompletionService
 from django.test import TestCase
 from lms.djangoapps.completion.models import BlockCompletionManager, BlockCompletion
-from lms.djangoapps.completion import waffle
+from lms.djangoapps.completion.test_utils import CompletionWaffleTestMixin
 from opaque_keys.edx.keys import CourseKey, UsageKey
+# from openedx.core.djangoapps.waffle_utils.testutils import WAFFLE_TABLES, override_waffle_flag
 # from lms.djangoapps.completion.test_utils import CompletionWaffleTestMixin
 # from cms.djangoapps.contentstore.tests.utils import parse_json
 # from openedx.features.course_experience.utils import get_course_outline_block_tree
@@ -256,7 +257,7 @@ class TestCourseOutlinePageWithPrerequisites(SharedModuleStoreTestCase, Mileston
         self.assertIn(self.UNLOCKED, subsection.children('.sr').html())
 
 
-class TestCourseOutlineResumeCourse(SharedModuleStoreTestCase):
+class TestCourseOutlineResumeCourse(SharedModuleStoreTestCase, CompletionWaffleTestMixin):
     """
     Test start course and resume course for the course outline view.
 
@@ -307,6 +308,7 @@ class TestCourseOutlineResumeCourse(SharedModuleStoreTestCase):
         """
         super(TestCourseOutlineResumeCourse, self).setUp()
         self.client.login(username=self.user.username, password=TEST_PASSWORD)
+        self.override_waffle_switch(False)
 
     def visit_sequential(self, course, chapter, sequential):
         """
@@ -350,6 +352,7 @@ class TestCourseOutlineResumeCourse(SharedModuleStoreTestCase):
         # first navigate to a sequential to make it the last accessed
         chapter = course.children[0]
         sequential = chapter.children[0]
+        vertical = sequential.children[0]
         self.visit_sequential(course, chapter, sequential)
 
         # check resume course buttons
@@ -358,33 +361,62 @@ class TestCourseOutlineResumeCourse(SharedModuleStoreTestCase):
 
         self.assertContains(response, 'Start Course', count=0)
         self.assertContains(response, 'Resume Course', count=2)
-        content = pq(response.content)
-        self.assertTrue(content('.action-resume-course').attr('href').endswith('/sequential/' + sequential.url_name))
 
-    # def test_resume_course_with_completion_api(self):
-    #     # Enable the waffle flag for all tests
-    #     _overrider = waffle.waffle().override(waffle.ENABLE_COMPLETION_TRACKING, True)
-    #     _overrider.__enter__()
-    #     # self.addCleanup(_overrider.__exit__, None, None, None)
-    #
-    #     # with patch('lms.djangoapps.completion.models.BlockCompletionManager.submit_completion') as mock_complete:
-    #     # self.visit_sequential(course, chapter, sequential2)
-    #     course = CourseFactory.create()
-    #     block = ItemFactory.create(category='comp', parent=course)
-    #     # fake_course_str = str(course.id) + 'fake'
-    #     course_key = CourseKey.from_string(str(course.id))
-    #
-    #     # course_key = CourseKey.from_string(course.)
-    #     bcm = BlockCompletionManager()
-    #
-    #     bcm.submit_completion(self.user, course_key, block.scope_ids.usage_id, 0.7)
-    #
-    #     response = self.client.get(course_home_url(course))
-    #     self.assertEqual(response.status_code, 200)
-    #     self.assertContains(response, 'Start Course', count=0)
-    #     self.assertContains(response, 'Resume Course', count=2)
-    #     content = pq(response.content)
-    #     self.assertTrue(content('.action-resume-course').attr('href').endswith('/sequential/' + block.url_name))
+        content = pq(response.content)
+        self.assertTrue(content('.action-resume-course').attr('href').endswith('/vertical/' + vertical.url_name))
+
+    def test_resume_course_with_completion_api(self):
+        """
+        Tests completion API resume button functionality
+        """
+        # Enable the waffle flag for all tests
+        self.override_waffle_switch(True)
+        completion_mgr = BlockCompletionManager()
+
+        # Generate a New Course
+        course = self.create_test_course()
+        chapter = course.children[0]
+        sequential = chapter.children[0]
+        vertical = sequential.children[0]
+
+        # Visit seq1
+        self.visit_sequential(course, chapter, sequential)
+
+        course_key = CourseKey.from_string(str(course.id))
+        block_key = UsageKey.from_string('/'.join((
+            'i4x:/',
+            course.org,
+            course.number,
+            'vertical',
+            vertical.url_name
+        )))
+        completion = 1.0
+        completion_mgr.submit_completion(
+            user=self.user,
+            course_key=course_key,
+            block_key=block_key,
+            completion=completion
+        )
+
+        # Test for 'resume' link
+        response = self.client.get(course_home_url(course))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Start Course', count=0)
+        self.assertContains(response, 'Resume Course', count=2)
+
+        # Test for 'resume' link URL - should be vertical 1
+        content = pq(response.content)
+        self.assertTrue(content('.action-resume-course').attr('href').endswith('/vertical/' + vertical.url_name))
+
+        # visit seq2
+        # Test for 'resume' link URL - should be vertical 2
+
+        # visit seq 1
+        # Test for 'resume' link URL - should be vertical 2 (latest complete block)
+
+
+
+
 
     def test_resume_course_deleted_sequential(self):
         """
@@ -504,37 +536,3 @@ class TestCourseOutlinePreview(SharedModuleStoreTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'Future Chapter')
-
-
-class ResumeCoursecompletion(SharedModuleStoreTestCase):
-    """
-
-    """
-    def setUp(self):
-        super(ResumeCoursecompletion, self).setUp()
-        _overrider = waffle.waffle().override(waffle.ENABLE_COMPLETION_TRACKING, True)
-        _overrider.__enter__()
-        self.addCleanup(_overrider.__exit__, None, None, None)
-
-        self.block_key = UsageKey.from_string('block-v1:edx+test+run+type@video+block@doggos')
-        self.course = CourseFactory()
-        # self.course_key_obj = CourseKey.from_string(self.course.id) #'course-v1:edx+test+run')
-        self.user = UserFactory()
-        CourseEnrollmentFactory.create(user=self.user, course_id=unicode(self.course.id))
-
-    def test_block_completion(self):
-        course_key_obj = CourseKey.from_string(unicode(self.course.id))
-
-        blocks = [(self.block_key, 1.0)]
-        BlockCompletion.objects.submit_batch_completion(self.user, course_key_obj, blocks)
-        self.assertEqual(BlockCompletion.objects.count(), 1)
-        self.assertEqual(BlockCompletion.objects.last().completion, 1.0)
-
-
-        response = self.client.get(course_home_url(self.course))
-        # print self.course_key_obj
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Start Course', count=0)
-        self.assertContains(response, 'Resume Course', count=2)
-        content = pq(response.content)
-        self.assertTrue(content('.action-resume-course').attr('href').endswith('doggos' + block.url_name))

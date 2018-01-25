@@ -52,7 +52,6 @@ def get_course_outline_block_tree(request, course_id):
         """
         def recurse_mark_complete(completion_query, last_complete, block):
             locatable_block_string = BlockUsageLocator.from_string(block['id'])
-            print last_complete
             if BlockUsageLocator.from_string(block['id']) in completion_query.keys():
                 block['complete'] = True
                 if locatable_block_string == last_complete.keys()[0]:
@@ -60,14 +59,23 @@ def get_course_outline_block_tree(request, course_id):
 
             if block.get('children'):
                 for child in block['children']:
-                    block['children'][block['children'].index(child)] = recurse_mark_complete(completion_query, last_complete, block=child)
+                    block['children'][block['children'].index(child)] = recurse_mark_complete(
+                        completion_query,
+                        last_complete,
+                        block=child
+                    )
                     if block['children'][block['children'].index(child)]['resume_block'] is True:
                         block['resume_block'] = True
 
             return block
         last_completed_child_position = completion_service_instance.get_latest_block_completed()
         course_block_query = completion_service_instance.get_course_completions()
-        recurse_mark_complete(completion_query=course_block_query, last_complete=last_completed_child_position, block=block)
+        if len(last_completed_child_position) > 0 or len(course_block_query) > 0:
+            recurse_mark_complete(
+                completion_query=course_block_query,
+                last_complete=last_completed_child_position,
+                block=block
+            )
 
     def mark_last_accessed(user, course_key, block):
         """
@@ -84,8 +92,9 @@ def get_course_outline_block_tree(request, course_id):
                 last_accessed_child_block['resume_block'] = True
                 mark_last_accessed(user, course_key, last_accessed_child_block)
             else:
-                # We should be using an id in place of position for last accessed. However, while using position, if
-                # the child block is no longer accessible we'll use the last child.
+                # We should be using an id in place of position for last accessed.
+                # However, while using position, if the child block is no longer accessible
+                # we'll use the last child.
                 block['children'][-1]['resume_block'] = True
 
     course_key = CourseKey.from_string(course_id)
@@ -96,8 +105,26 @@ def get_course_outline_block_tree(request, course_id):
         course_usage_key,
         user=request.user,
         nav_depth=3,
-        requested_fields=['children', 'display_name', 'type', 'due', 'graded', 'special_exam_info', 'show_gated_sections', 'format'],
-        block_types_filter=['course', 'chapter', 'sequential', 'vertical', 'html', 'problem', 'video', 'discussion']
+        requested_fields=[
+            'children',
+            'display_name',
+            'type',
+            'due',
+            'graded',
+            'special_exam_info',
+            'show_gated_sections',
+            'format'
+        ],
+        block_types_filter=[
+            'course',
+            'chapter',
+            'sequential',
+            'vertical',
+            'html',
+            'problem',
+            'video',
+            'discussion'
+        ]
     )
 
     course_outline_root_block = all_blocks['blocks'].get(all_blocks['root'], None)
