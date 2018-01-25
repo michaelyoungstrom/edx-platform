@@ -83,43 +83,27 @@ class CourseHomeFragmentView(EdxFragmentView):
 
         """
 
-        def get_last_accessed_block(block):
+        def get_resume_block(block):
             """
-            Gets the deepest block marked as 'last_accessed', or with a completion value > 0.
+            Gets the deepest block marked as 'resume_block', or with a completion value > 0.
 
             """
-            if not block['last_accessed']:
+            if not block['resume_block']:
                 return None
             if not block.get('children'):
-                # course_key = CourseKey.from_string(course_id)
-                # completion_service_instance = CompletionService(
-                #     user=request.user,
-                #     course_key=course_key
-                # )
-                # if completion_service_instance.completion_tracking_enabled():
-                #     # print 'WOW'
-                #     block_usage_key = UsageKey.from_string(block['id'])
-                #     completion_data = completion_service_instance.get_completions([block_usage_key])
-                #     # print '***'
-                #     print completion_data  #.values()[0]
-                #     if float(completion_data.values()[0] > 0.2:
-                #         return block
-                #     # else:
-                #     return None
-                # else:
                 return block
 
             for child in block['children']:
-                last_accessed_block = get_last_accessed_block(child)
-                if last_accessed_block:
-                    return last_accessed_block
+                resume_block = get_resume_block(child)
+                if resume_block:
+                    return resume_block
             return block
 
         course_outline_root_block = get_course_outline_block_tree(request, course_id)
-        last_accessed_block = get_last_accessed_block(course_outline_root_block) if course_outline_root_block else None
-        has_visited_course = bool(last_accessed_block)
-        if last_accessed_block:
-            resume_course_url = last_accessed_block['lms_web_url']
+        resume_block = get_resume_block(course_outline_root_block) if course_outline_root_block else None
+        has_visited_course = bool(resume_block)
+        if resume_block:
+            resume_course_url = resume_block['lms_web_url']
         else:
             resume_course_url = course_outline_root_block['lms_web_url'] if course_outline_root_block else None
 
