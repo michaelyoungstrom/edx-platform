@@ -78,7 +78,7 @@ class CourseHomeFragmentView(EdxFragmentView):
 
         Returns a tuple: (has_visited_course, resume_course_url)
             has_visited_course: True if the user has ever visted the course, False otherwise.
-            resume_course_url: The URL of the last accessed block if the user has visited the course,
+            resume_course_url: The URL of the 'resume course' block if the user has visited the course,
                 otherwise the URL of the course root.
 
         """

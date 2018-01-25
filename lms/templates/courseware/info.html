@@ -62,11 +62,6 @@ from openedx.core.djangolib.markup import HTML, Text
               <div class="page-subtitle">${course.display_name_with_default}</div>
             </h2>
         </div>
-        % if resume_course_url and user_is_enrolled:
-          <div class="page-header-secondary">
-              <a href="${resume_course_url}" class="last-accessed-link">${_("Resume Course")}</a>
-          </div>
-        % endif
       </div>
       <div class="info-wrapper">
       % if user.is_authenticated():
