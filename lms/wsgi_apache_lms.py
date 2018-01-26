@@ -5,6 +5,13 @@ This module contains the WSGI application used for Apache deployment.
 It exposes a module-level variable named ``application``.
 """
 
+# Stop ignoring DeprecationWarning, ImportWarning, and PendingDeprecationWarning;
+# log all Python warnings to the main log file
+import logging
+import warnings
+warnings.simplefilter('default')
+logging.captureWarnings(True)
+
 # Patch the xml libs before anything else.
 from safe_lxml import defuse_xml_libs
 defuse_xml_libs()

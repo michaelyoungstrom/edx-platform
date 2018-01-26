@@ -8,6 +8,13 @@ It exposes a module-level variable named ``application``. Django's
 ``WSGI_APPLICATION`` setting.
 """
 
+# Stop ignoring DeprecationWarning, ImportWarning, and PendingDeprecationWarning;
+# log all Python warnings to the main log file
+import logging
+import warnings
+warnings.simplefilter('default')
+logging.captureWarnings(True)
+
 # Patch the xml libs
 from safe_lxml import defuse_xml_libs
 defuse_xml_libs()

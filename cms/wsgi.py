@@ -1,3 +1,20 @@
+"""
+WSGI config for CMS.
+
+This module contains the WSGI application used by Django's development server
+and any production WSGI deployments.
+It exposes a module-level variable named ``application``. Django's
+``runserver`` and ``runfcgi`` commands discover this application via the
+``WSGI_APPLICATION`` setting.
+"""
+
+# Stop ignoring DeprecationWarning, ImportWarning, and PendingDeprecationWarning;
+# log all Python warnings to the main log file
+import logging
+import warnings
+warnings.simplefilter('default')
+logging.captureWarnings(True)
+
 # Patch the xml libs before anything else.
 from safe_lxml import defuse_xml_libs
 defuse_xml_libs()
