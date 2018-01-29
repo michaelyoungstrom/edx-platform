@@ -1,27 +1,25 @@
 pipeline {
     agent { label 'master' }
     stages {
-        stage('build') {
-            steps {
-                parallel {
-                    stage('1') {
-                        agent {
-                            label 'master'
-                        }
-                        steps {
-                            echo "On Branch A"
-                        }
+        stage('Parallel Stage') {
+            parallel {
+                stage('Branch A') {
+                    agent {
+                        label 'master'
                     }
-                    stage('2') {
-                        agent {
-                            label 'master'
-                        }
-                        steps {
-                            echo "On Branch B"
-                        }
+                    steps {
+                        echo "On Branch A"
+                    }
+                }
+                stage('Branch B') {
+                    agent {
+                        label 'master'
+                    }
+                    steps {
+                        echo "On Branch B"
                     }
                 }
             }
         }
-	}
+    }
 }
