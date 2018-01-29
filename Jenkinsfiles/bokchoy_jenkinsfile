@@ -1,0 +1,25 @@
+pipeline {
+    agent { label 'master' }
+    stages {
+        stage('build') {
+            parallel {
+                stage('1') {
+                    agent {
+                        label "master"
+                    }
+                    steps {
+                        echo "On Branch A"
+                    }
+                }
+                stage('2') {
+                    agent {
+                        label "master"
+                    }
+                    steps {
+                        echo "On Branch B"
+                    }
+                }
+            }
+	}
+    }
+}
