@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Parallel Stage') {
             steps {
-                parallel {
+                parallel (
                     "first" : {
                         agent {
                             label 'master'
@@ -20,7 +20,7 @@ pipeline {
                             echo "On Branch B"
                         }
                     }
-                }
+                )
             }
         }
     }
