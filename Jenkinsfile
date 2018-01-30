@@ -1,9 +1,13 @@
 pipeline {
     agent { label 'master' }
     stages {
-        stage('build') {
+        stage('sleep') {
             steps {
                 sh 'sleep 180'
+            }
+        }
+        stage('echo') {
+            steps {
                 sh 'echo hey'
             }
         }
