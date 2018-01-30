@@ -3,6 +3,7 @@ pipeline {
     stages {
         stage('build') {
             steps {
+                sh 'sleep 180'
                 sh 'echo hey'
             }
         }
